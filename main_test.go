@@ -66,7 +66,7 @@ func TestLookupWANFallsBack(t *testing.T) {
 }
 
 func TestMetricsBeforeFirstVerdict(t *testing.T) {
-	c := &checker{record: "home.stewart.net"}
+	c := &checker{record: "example.com"}
 	rec := httptest.NewRecorder()
 	c.metrics(rec, nil)
 	body := rec.Body.String()

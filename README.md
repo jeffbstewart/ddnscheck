@@ -6,6 +6,9 @@ network's WAN egress IP?* -- via paths deliberately disjoint from
 whatever updates the record, so the updater and the checker cannot be
 wrong together.
 
+**IPv4 only:** ddnscheck verifies a single A record against an IPv4 WAN
+egress -- there is no AAAA / IPv6 support.
+
 - The published record is resolved against a **public** DNS resolver
   (default `1.1.1.1:53`), dialed directly -- never through a
   split-horizon internal resolver that might answer with an internal
@@ -23,7 +26,7 @@ different machinery from -- your dynamic-DNS updater.
 
 | Flag | Default | Meaning |
 | --- | --- | --- |
-| `-record` | `home.stewart.net` | DNS record to verify |
+| `-record` | *(required)* | DNS record to verify; ddnscheck refuses to start if empty |
 | `-resolver` | `1.1.1.1:53` | public DNS resolver (host:port); must NOT be a split-horizon resolver |
 | `-wan-urls` | `https://checkip.amazonaws.com,https://api.ipify.org` | comma-separated HTTPS services that echo the caller's IP, tried in order |
 | `-port` | `9878` | metrics listener port |

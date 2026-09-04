@@ -1,21 +1,18 @@
-// Command ddnscheck is the independent efficacy monitor for dynamic
-// DNS (docs/MONITORING.md, ddns phase 2): it answers "does the
-// published record actually point at our WAN egress?" via paths
-// DELIBERATELY DISJOINT from ddns-updater's own machinery, so the two
-// cannot be wrong together.
+// Command ddnscheck is an independent efficacy monitor for dynamic DNS:
+// it answers "does the published record actually point at this network's
+// WAN egress?" via paths DELIBERATELY DISJOINT from whatever updates the
+// record, so the updater and the checker cannot be wrong together.
 //
 //   - The published record is resolved against a PUBLIC resolver
-//     (default 1.1.1.1:53), dialed directly -- never through CoreDNS,
-//     whose split horizon answers 172.16.42.3 for the same name.
+//     (default 1.1.1.1:53), dialed directly -- never through a
+//     split-horizon internal resolver that may answer with an internal
+//     address for the same name.
 //   - The WAN egress IP comes from HTTPS what-is-my-ip services,
-//     NOT from the DNS-based fetchers (whoami.cloudflare /
-//     myip.opendns.com) that ddns-updater itself uses.
+//     independent of any DNS-based IP discovery the updater uses.
 //
-// It exposes the verdict as Prometheus metrics on --port; the
-// homenet_metrics bridge carries the scrape. A mismatch sustained
-// past the failover-convergence budget pages (rules in
-// monitoring/rules/homenet-ddns.yml). Zero dependencies, stdlib only,
-// FROM scratch (see Dockerfile).
+// IPv4 ONLY: it verifies a single A record against an IPv4 WAN egress.
+// It exposes the verdict as Prometheus metrics on --port. Zero
+// dependencies, stdlib only, FROM scratch (see Dockerfile).
 package main
 
 import (
@@ -62,8 +59,8 @@ type state struct {
 func main() {
 	fs := flag.NewFlagSet("ddnscheck", flag.ContinueOnError)
 	port := fs.Int("port", 9878, "metrics listener port")
-	record := fs.String("record", "home.stewart.net", "DNS record to verify")
-	resolver := fs.String("resolver", "1.1.1.1:53", "public DNS resolver (host:port) -- must NOT be the split-horizon CoreDNS")
+	record := fs.String("record", "", "DNS record to verify (required)")
+	resolver := fs.String("resolver", "1.1.1.1:53", "public DNS resolver (host:port) -- must NOT be a split-horizon internal resolver")
 	wanURLs := fs.String("wan-urls", "https://checkip.amazonaws.com,https://api.ipify.org", "comma-separated HTTPS services echoing the caller's IP, tried in order")
 	interval := fs.Duration("interval", 2*time.Minute, "time between checks")
 	timeout := fs.Duration("timeout", 15*time.Second, "per-check deadline")
@@ -72,6 +69,11 @@ func main() {
 			os.Exit(0)
 		}
 		os.Exit(2) // flag already printed the message and usage
+	}
+	if *record == "" {
+		fmt.Fprintln(os.Stderr, "ddnscheck: -record is required")
+		fs.Usage()
+		os.Exit(2)
 	}
 
 	c := &checker{
