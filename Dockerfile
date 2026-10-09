@@ -6,9 +6,10 @@
 # ghcr.io/jeffbstewart/ddnscheck on push to main and on version tags.
 # To build locally from the repo root:  docker build -t ddnscheck:dev .
 #
-# The builder is pinned by digest (golang:1.26): it controls the output
-# binary, so pin it like a dependency.
-FROM golang:1.26@sha256:dc2521c2a906db43073b8b4d99f491b6341cf15610b6ebbab187c45153f9959e AS build
+# The builder is pinned by digest (golang:1.26.9, resolved 2026-10-09 for
+# the 2026-10-08 Go security release): it controls the output binary,
+# so pin it like a dependency.
+FROM golang:1.26.9@sha256:f1f0bcc2c524a3ced375fcb4d1ecb7aa371aa7070e112599aaca45cc02d0101b AS build
 WORKDIR /src
 COPY go.mod ./
 COPY *.go ./
